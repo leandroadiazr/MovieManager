@@ -11,11 +11,19 @@ class FavoritesViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.backgroundColor = .systemGray
+        configureNavigationController()
 
         // Do any additional setup after loading the view.
     }
     
 
+    func configureNavigationController(with color: UIColor? = .systemBlue) {
+//        let addBtn = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addToFavorites))
+//        navigationItem.rightBarButtonItem = addBtn
+        self.navigationController?.navigationBar.barTintColor = color
+        self.navigationController?.navigationBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+    }
     /*
     // MARK: - Navigation
 
