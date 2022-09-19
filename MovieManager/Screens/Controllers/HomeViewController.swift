@@ -25,14 +25,21 @@ class HomeViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        self.showCustomLoadingView()
         getData()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: {
+            self.dismissLoadingView()
+        })
     }
     
     private func configure() {
         configureSearch()
         configureTableView()
-        let addBtn = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addToFavorites))
-        navigationItem.rightBarButtonItem = addBtn
+        configureNavigationController()
     }
     
     func getData() {
@@ -41,6 +48,8 @@ class HomeViewController: UIViewController {
     }
     
     func configureNavigationController(with color: UIColor? = .systemBlue) {
+        let addBtn = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addToFavorites))
+        navigationItem.rightBarButtonItem = addBtn
         self.navigationController?.navigationBar.barTintColor = color
         self.navigationController?.navigationBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
     }
@@ -55,7 +64,7 @@ class HomeViewController: UIViewController {
         searchBar?.searchBar.delegate                   = self
         searchBar?.searchBar.searchTextField.backgroundColor = .white
         searchBar?.searchBar.tintColor = .white
-        navigationItem.hidesSearchBarWhenScrolling  = false
+        navigationItem.hidesSearchBarWhenScrolling  = true
         navigationItem.searchController             = searchBar
     }
     
@@ -79,7 +88,18 @@ class HomeViewController: UIViewController {
 
 
 //MARK: - Delegates
-extension HomeViewController: UITableViewDelegate, UITableViewDataSource {
+extension HomeViewController: UITableViewDelegate, UITableViewDataSource, UITableViewDataSourcePrefetching {
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        guard let movies = self.viewModel?.movies else { return }
+        guard let titleSearch = movies.first?.title else { return }
+        for index in indexPaths {
+            if index.row >= movies.count - 2 {
+                print(titleSearch)
+                getMovie(string: titleSearch)
+            }
+        }
+    }
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if self.viewModel?.moviesFiltered?.count ?? 0 > 0 {
             guard let filtered = self.viewModel?.moviesFiltered?.count else { return 0 }
@@ -89,7 +109,7 @@ extension HomeViewController: UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: HomeViewCell.reuseID, for: indexPath) as! HomeViewCell
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: HomeViewCell.reuseID, for: indexPath) as? HomeViewCell else { return UITableViewCell() }
         
         if isFiltering {
             if self.viewModel?.moviesFiltered?.count ?? 0 > 0 {
@@ -123,7 +143,6 @@ extension HomeViewController: UITableViewDelegate, UITableViewDataSource {
     }
 }
 
-
 //MARK: - SEARCH
 extension HomeViewController: UISearchResultsUpdating, UISearchControllerDelegate, UISearchBarDelegate  {
     func updateSearchResults(for searchController: UISearchController) {
@@ -131,6 +150,11 @@ extension HomeViewController: UISearchResultsUpdating, UISearchControllerDelegat
         guard let movies = self.viewModel?.movies else { return }
         guard let string = searchController.searchBar.text, !string.isEmpty else { return }
         self.viewModel?.moviesFiltered = movies.matching(string)
+        getMovie(string: string)
+        self.reloadData()
+    }
+    
+    private func getMovie(string: String) {
         self.showCustomLoadingView()
         self.networkManger.getMovies(by: string) { [weak self] result in
             self?.dismissLoadingView()
@@ -151,7 +175,6 @@ extension HomeViewController: UISearchResultsUpdating, UISearchControllerDelegat
                 break
             }
         }
-        self.reloadData()
     }
     
     private func reloadData() {
@@ -164,7 +187,7 @@ extension HomeViewController: UISearchResultsUpdating, UISearchControllerDelegat
     func clearTextField() {
         self.searchBar?.searchBar.searchTextField.text = ""
         self.viewModel?.moviesFiltered = nil
-        self.tableView?.reloadData()
+        self.reloadData()
         isFiltering = false
     }
     

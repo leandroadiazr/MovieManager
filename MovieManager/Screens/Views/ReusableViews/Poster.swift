@@ -9,7 +9,7 @@ import UIKit
 
 class Poster: UIImageView {
     let cache = NetworkManager.shared.cache
-    let placheHolderImage = UIImage(systemName: "person")
+    let placheHolderImage = UIImage(systemName: "movie")
     
     override init(frame: CGRect) {
         super.init(frame: frame)
